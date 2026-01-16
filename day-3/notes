@@ -1,0 +1,13 @@
+
+
+
+<!-- 
+Conversation Summarizer: Build a chatbot that automatically summarizes conversation history when it exceeds 2000 tokens, maintaining the summary as compressed context.
+Vector Memory Integration: Implement long-term memory using ChromaDB or FAISS. Store user facts and retrieve them in subsequent conversations.
+State Checkpoint Demo: Using LangGraph's SqliteSaver, create an agent that can be interrupted and resumed with full state recovery.
+ -->
+
+ <!-- step 1: create a chatbot -->
+ <!-- step 2: add condition to maintain context after every 2000 words -->
+ <!-- step 3: long term memory persistence, restarting the kernel should also persist the data -->
+ <!-- step 4: add functionality to reset the chatbot to a particular state -->
