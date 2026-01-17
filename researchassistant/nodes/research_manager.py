@@ -1,5 +1,4 @@
 from researchassistant.prompts.prompts import get_research_prompt
-from aiohttp.web_routedef import get
 from researchassistant.llm.openai import LLMClient
 from researchassistant.state.state import ResearchAssistantState
 

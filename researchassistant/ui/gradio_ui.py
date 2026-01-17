@@ -1,6 +1,5 @@
 from dotenv import load_dotenv
 load_dotenv()
-
 from researchassistant.memory.chroma import conversation_store
 import os
 from researchassistant.graph import graph
@@ -13,35 +12,23 @@ import gradio as gr
 # GRADIO UI
 # =========================================================
 config = {"configurable": {"thread_id": "user-1"}}
+
+
+
 def chat(user_input, history):
 
-    print("User input:", user_input)
-
-
-    conversation_store.add_texts(
-        ["USER: " + user_input],
-        metadatas=[{"conversation_id": "conv_user-1"}]
-    )
+    #  on every chat this will invoke the graph with empty conversation_history, but I want to load it from memory
+    conversation_history = conversation_store.get()
+    
 
     result = graph.invoke(
         {
             "topic": user_input,
             "researched_output": "",
-            "conversation_history": history or [],
-            "conversation_id": "conv_user-1"
+            "conversation_history": conversation_history['documents'],
         },
         config=config
     )
-
-    conversation_store.add_texts(
-        ["MODAL: " + result['researched_output']],
-        metadatas=[{"conversation_id": "conv_user-1"}]
-    )
-
-
-    all_con = conversation_store._collection.get().get("documents", [])
-    print("All conversation stored:", all_con)
-    # append conversation in state and in a DB based on conversation_id
 
     return {
         "role": "assistant",
@@ -52,29 +39,6 @@ def chat(user_input, history):
 def refresh_facts():
     return load_all_facts()
 
-def load_conversation_for_ui():
-    results = conversation_store._collection.get(
-        where={"conversation_id": "conv_user-1"},
-        limit=100
-    )
-
-    documents = results.get("documents", [])
-    metadatas = results.get("metadatas", [])
-
-    chat_messages = []
-
-    print("Loaded conversation:", documents, metadatas)
-    for text, meta in zip(documents, metadatas):
-        role = "user" if text.startswith("USER: ") else "assistant"
-        text = text.replace("USER: ", "").replace("MODAL: ", "")
-        chat_messages.append({
-            "role": role,
-            "content": text
-        })
-
-
-    return chat_messages
-
 
 with gr.Blocks() as demo:
     gr.Markdown("## 🧠 Personal Research Assistant")
@@ -83,8 +47,7 @@ with gr.Blocks() as demo:
         with gr.Column(scale=2):
             chat = gr.ChatInterface(
                 fn=chat,  # your existing chat function
-                title="Research Chat",
-                chatbot=gr.Chatbot(value=load_conversation_for_ui())
+                title="Research Chat"
             )
 
         with gr.Column(scale=1):
