@@ -10,6 +10,7 @@ class GraphState(TypedDict, total=False):
     draft_note: str
     approved_note: str
     final_answer: str
+    thread_id: str
 
     save_note_requested: bool
     interrupt_response: Optional[str]  # "confirm" | "cancel"

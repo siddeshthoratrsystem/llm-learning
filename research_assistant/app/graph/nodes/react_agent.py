@@ -54,7 +54,7 @@ def react_agent(state):
 
     # --- State transitions ---
     if action == "finish":
-        save_conversation(state["user_input"], answer)
+        save_conversation(state["user_input"], answer, thread_id=state.get("thread_id", None))
         return {
             **state,
             "final_answer": answer,

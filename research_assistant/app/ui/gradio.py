@@ -10,15 +10,43 @@ session_state = {}
 def chat_fn(message, history):
     state = {
         "user_input": message,
-        "messages": history or []
+        "messages": history or [],
+        "thread_id": config["configurable"]["thread_id"],
     }
+    # history.append({"role": "user", "content": message})
+
+    # Show user immediately
     history.append({"role": "user", "content": message})
-    result = graph.invoke(state, config)
-    session_state["state"] = result
+    history.append({"role": "assistant", "content": ""})
+    yield history, None, gr.update(visible=False)
+
+    # result = graph.invoke(state, config)
+    # session_state["state"] = result
     
-    history.append({"role": "assistant", "content": result["final_answer"]})
+    # history.append({"role": "assistant", "content": result["final_answer"]})
+    assistant_text = ""
+
+    count = 0
+    for event in graph.stream(state, config):
+        print("Event:", event, count)
+        count += 1
+        if "save_note_handler" in event:
+            save_note_handler = event["save_note_handler"]
+            if "final_answer" in save_note_handler:
+                assistant_text += save_note_handler["final_answer"]
+                history[-1]["content"] = assistant_text
+                # print("Inside the loop Final assistant text:", assistant_text)
+                yield history, None, gr.update(visible=False)
     # return result["final_answer"]
-    return history, result, gr.update(visible=True)
+    
+    print("Final assistant text:", history)
+    # history[-1]["content"] = session_state.get("state", {}).get("final_answer", assistant_text)
+    session_state["state"] = {
+        **state,
+        "final_answer": assistant_text,
+    }
+
+    yield history, session_state["state"], gr.update(visible=True)
 
 def save_note(history):
     print("Note saved!")
@@ -46,11 +74,35 @@ def confirm_save_resolve_interrupt():
     session_state["state"] = result
     return gr.update(visible=False), gr.update(visible=False)
 
+def cancel_save_resolve_interrupt():
+    state = session_state["state"]
+
+
+    state["interrupt_response"] = "cancel"
+    print("Cancelling...")
+    result = graph.invoke(state, config=config)
+
+    print("result after cancelling", result)
+    session_state["state"] = result
+    return gr.update(visible=False), gr.update(visible=False)
+
 # ui = 
-with gr.Blocks() as ui:
-    chatbot = gr.Chatbot()
-    user_input = gr.Textbox(placeholder="Ask a question...")
-    send_btn = gr.Button("Send")
+with gr.Blocks(css="""
+    #chatbot {height: 500px}
+    #input-row {position: sticky; bottom: 0;}
+    """) as ui:
+
+
+    chatbot = gr.Chatbot(elem_id="chatbot")
+
+    with gr.Row(elem_id="input-row"):
+        user_input = gr.Textbox(
+            placeholder="Ask a question...",
+            scale=8,
+            container=False
+        )
+        send_btn = gr.Button("Send", scale=1)
+
     with gr.Row(visible=False) as save_section:
         text = gr.Label("Do you want to save this reply as a note?")
         save_btn = gr.Button("💾 Save note")
@@ -85,6 +137,11 @@ with gr.Blocks() as ui:
 
     confirm_btn.click(
         confirm_save_resolve_interrupt,
+        inputs=[],
+        outputs=[confirm_section, save_section],
+    )
+    cancel_btn.click(
+        cancel_save_resolve_interrupt,
         inputs=[],
         outputs=[confirm_section, save_section],
     )
