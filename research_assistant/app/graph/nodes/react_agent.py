@@ -1,3 +1,4 @@
+from research_assistant.app.memory.vector_store import save_conversation
 from langchain_openai import ChatOpenAI
 from dotenv import load_dotenv
 
@@ -53,6 +54,7 @@ def react_agent(state):
 
     # --- State transitions ---
     if action == "finish":
+        save_conversation(state["user_input"], answer)
         return {
             **state,
             "final_answer": answer,

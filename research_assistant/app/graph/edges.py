@@ -33,7 +33,6 @@ def build_graph():
         {"web_search": "web_search", "finish": "save_note_gate"}
     )
 
-    # SIDTODO: unclear
     graph.add_edge("web_search", "react_agent")
     # graph.add_edge("react_agent", END)
     # "save_note_gate")
