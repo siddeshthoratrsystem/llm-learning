@@ -1,3 +1,4 @@
+from research_assistant.app.memory.vector_store import load_conversations
 from research_assistant.app.memory.vector_store import save_conversation
 from langchain_openai import ChatOpenAI
 from dotenv import load_dotenv
@@ -55,6 +56,7 @@ def react_agent(state):
     # --- State transitions ---
     if action == "finish":
         save_conversation(state["user_input"], answer, thread_id=state.get("thread_id", None))
+        print("inside finish", load_conversations())
         return {
             **state,
             "final_answer": answer,

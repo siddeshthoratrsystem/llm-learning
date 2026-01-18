@@ -1,5 +1,9 @@
 from dotenv import load_dotenv
 load_dotenv(override=True)
+
+from research_assistant.app.memory.vector_store import load_conversations
+from research_assistant.app.memory.vector_store import load_notes
+
 from research_assistant.app.graph.edges import build_graph
 import gradio as gr
 
@@ -18,12 +22,8 @@ def chat_fn(message, history):
     # Show user immediately
     history.append({"role": "user", "content": message})
     history.append({"role": "assistant", "content": ""})
-    yield history, None, gr.update(visible=False)
+    yield history, None, gr.update(visible=False), load_conversations()
 
-    # result = graph.invoke(state, config)
-    # session_state["state"] = result
-    
-    # history.append({"role": "assistant", "content": result["final_answer"]})
     assistant_text = ""
 
     count = 0
@@ -36,7 +36,7 @@ def chat_fn(message, history):
                 assistant_text += save_note_handler["final_answer"]
                 history[-1]["content"] = assistant_text
                 # print("Inside the loop Final assistant text:", assistant_text)
-                yield history, None, gr.update(visible=False)
+                yield history, None, gr.update(visible=False), load_conversations(),
     # return result["final_answer"]
     
     print("Final assistant text:", history)
@@ -46,7 +46,7 @@ def chat_fn(message, history):
         "final_answer": assistant_text,
     }
 
-    yield history, session_state["state"], gr.update(visible=True)
+    yield history, session_state["state"], gr.update(visible=True), load_conversations()
 
 def save_note(history):
     print("Note saved!")
@@ -72,7 +72,7 @@ def confirm_save_resolve_interrupt():
 
     print("result after confirm", result)
     session_state["state"] = result
-    return gr.update(visible=False), gr.update(visible=False)
+    return gr.update(visible=False), gr.update(visible=False), load_notes()
 
 def cancel_save_resolve_interrupt():
     state = session_state["state"]
@@ -90,6 +90,29 @@ def cancel_save_resolve_interrupt():
 with gr.Blocks(css="""
     #chatbot {height: 500px}
     #input-row {position: sticky; bottom: 0;}
+    .action-card {
+        padding: 12px 14px;
+        border-radius: 10px;
+        background: #f6f7f9;
+        margin-bottom: 8px;
+        color: #666;
+    }
+
+    .title {
+        color: black;
+        font-size: 15px;
+    }
+
+    .action-card.warning {
+        background: #fff4e5;
+    }
+
+    .action-subtext {
+        font-size: 15px;
+        color: #666;
+        margin-top: 4px;
+    }
+
     """) as ui:
 
 
@@ -103,23 +126,66 @@ with gr.Blocks(css="""
         )
         send_btn = gr.Button("Send", scale=1)
 
-    with gr.Row(visible=False) as save_section:
-        text = gr.Label("Do you want to save this reply as a note?")
-        save_btn = gr.Button("💾 Save note")
-        skip_btn = gr.Button("Skip")
+    with gr.Column(visible=True, elem_id="save_section") as save_section:
+        gr.Markdown(
+            """
+            <div class="action-card">
+                <b class="title">Save this reply as a note?</b>
+                <div class="action-subtext">
+                    You can access it later from Notes.
+                </div>
+            </div>
+            """
+        )
 
-    with gr.Row(visible=False) as confirm_section:
-        # show a title askign to confirm the save action
-        text = gr.Label("Please confirm you want to save the note.")
-        confirm_btn = gr.Button("Confirm")
-        cancel_btn = gr.Button("Cancel")
+        with gr.Row():
+            save_btn = gr.Button("💾 Save", variant="primary")
+            skip_btn = gr.Button("Skip", variant="secondary")
 
+
+    with gr.Column(visible=True, elem_id="confirm_section") as confirm_section:
+        gr.Markdown(
+            """
+            <div class="action-card warning">
+                <b class="title">Confirm save</b>
+                <div class="action-subtext">
+                    This action cannot be undone.
+                </div>
+            </div>
+            """
+        )
+
+        with gr.Row():
+            confirm_btn = gr.Button("Confirm", variant="primary")
+            cancel_btn = gr.Button("Cancel", variant="secondary")
+
+    with gr.Row():
+        with gr.Column(scale=1):
+            gr.Markdown("### 📝 Saved Notes")
+            notes_table = gr.Dataframe(
+                headers=["SavedNotes"],
+                datatype=["str"],
+                interactive=False
+            )
+
+        with gr.Column(scale=1):
+            gr.Markdown("### 💬 Conversations")
+            conversations_table = gr.Dataframe(
+                headers=["created_at", "user_input", "assistant_reply"],
+                datatype=["str", "str", "str"],
+                interactive=False
+            )
+
+    ui.load(
+        fn=lambda: (load_notes(), load_conversations()),
+        outputs=[notes_table, conversations_table],
+    )
     state_store = gr.State()
 
     send_btn.click(
         chat_fn,
         inputs=[user_input, chatbot],
-        outputs=[chatbot, state_store, save_section],
+        outputs=[chatbot, state_store, save_section, conversations_table],
     )
 
     skip_btn.click(
@@ -147,4 +213,5 @@ with gr.Blocks(css="""
     )
 
 if __name__ == "__main__":
+    print("checking notes", load_notes())
     ui.launch()
