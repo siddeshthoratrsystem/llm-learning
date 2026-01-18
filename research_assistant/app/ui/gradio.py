@@ -126,7 +126,7 @@ with gr.Blocks(css="""
         )
         send_btn = gr.Button("Send", scale=1)
 
-    with gr.Column(visible=True, elem_id="save_section") as save_section:
+    with gr.Column(visible=False, elem_id="save_section") as save_section:
         gr.Markdown(
             """
             <div class="action-card">
@@ -143,7 +143,7 @@ with gr.Blocks(css="""
             skip_btn = gr.Button("Skip", variant="secondary")
 
 
-    with gr.Column(visible=True, elem_id="confirm_section") as confirm_section:
+    with gr.Column(visible=False, elem_id="confirm_section") as confirm_section:
         gr.Markdown(
             """
             <div class="action-card warning">
